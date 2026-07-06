@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Field Assist - CST Kanban Release Notes (May - June 2026)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #0f1115;
@@ -84,6 +85,18 @@
     cursor: pointer;
   }
   .clear-btn:hover { color: var(--text); border-color: var(--accent); }
+  .export-btn {
+    font-size: 0.78rem;
+    padding: 6px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(51,193,122,0.4);
+    background: rgba(51,193,122,0.12);
+    color: var(--green);
+    cursor: pointer;
+    font-weight: 600;
+    margin-left: auto;
+  }
+  .export-btn:hover { background: rgba(51,193,122,0.22); }
   .result-count { font-size: 0.8rem; color: var(--text-dim); text-align: center; padding: 10px 0 0; max-width: 1000px; margin: 0 auto; }
 
   main { max-width: 1000px; margin: 0 auto; padding: 24px 20px 80px; }
@@ -177,6 +190,7 @@
     <div class="filter-group" id="state-filters"><span class="filter-group-label">State</span></div>
     <div class="filter-group" id="owner-filters"><span class="filter-group-label">Owner</span></div>
     <button class="clear-btn" id="clear-filters">Clear filters</button>
+    <button class="export-btn" id="export-excel">Export to Excel &#8595;</button>
   </div>
 </div>
 <div class="result-count" id="result-count"></div>
@@ -204,7 +218,7 @@
 </main>
 
 <footer class="bottom">
-  Generated from Azure DevOps board (Field_Assist \ pod-cst-kanban). Includes items with state In Development, Committed, Testing, Ready for Demo, UAT, or Done, owned by Harsh Pal or Vaibhav Sharma, changed between May 1 and June 30, 2026. Screenshot links open the original attachment in Azure DevOps and require board access to view.
+  Generated from Azure DevOps board (Field_Assist \ pod-cst-kanban). Includes items with state In Development, Committed, Testing, Ready for Demo, UAT, or Done, owned by Harsh Pal or Vaibhav Sharma, created between May 1, 2026 and the refresh date shown above. Screenshot thumbnails are embedded directly and require no login to view.
 </footer>
 
 <script>
@@ -360,6 +374,51 @@ document.getElementById('clear-filters').addEventListener('click', () => {
   state.search = ''; state.states.clear(); state.owners.clear();
   document.getElementById('search').value = '';
   render();
+});
+
+document.getElementById('export-excel').addEventListener('click', () => {
+  const rows = ITEMS.filter(matches).map(item => ({
+    'ID': item.id,
+    'Title': item.title,
+    'Category': item.category,
+    'State': item.state,
+    'Product Owner': item.productOwner,
+    'Effort': item.effort != null ? item.effort : '',
+    'Development Start Date': item.devStartDate || '',
+    'Screens / Modules': item.screens.join(', '),
+    'Problem Statement': item.problem_statement,
+    'Objective': item.objective,
+    'Steps to Use': item.steps_to_use,
+    'Acceptance Criteria': item.acceptance_criteria,
+    'Screenshots Attached': item.images && item.images.length ? item.images.length : 0,
+  }));
+
+  if (!rows.length) {
+    alert('No items match the current filters -- nothing to export.');
+    return;
+  }
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    { wch: 8 },
+    { wch: 45 },
+    { wch: 14 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 8 },
+    { wch: 20 },
+    { wch: 25 },
+    { wch: 60 },
+    { wch: 60 },
+    { wch: 60 },
+    { wch: 60 },
+    { wch: 10 },
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Release Notes');
+  const today = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `CST_Release_Notes_${today}.xlsx`);
 });
 
 buildFilterChips();
