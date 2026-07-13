@@ -63,6 +63,18 @@
   #search:focus { outline: none; border-color: var(--accent); }
   .filter-group { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   .filter-group-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 4px; }
+  .date-range-group { gap: 6px; }
+  .date-input {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 8px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    color-scheme: dark;
+  }
+  .date-input:focus { outline: none; border-color: var(--accent); }
+  .date-sep { font-size: 0.78rem; color: var(--text-dim); }
   .chip {
     cursor: pointer;
     user-select: none;
@@ -189,6 +201,12 @@
     <input type="text" id="search" placeholder="Search by task name or ID...">
     <div class="filter-group" id="state-filters"><span class="filter-group-label">State</span></div>
     <div class="filter-group" id="owner-filters"><span class="filter-group-label">Owner</span></div>
+    <div class="filter-group date-range-group">
+      <span class="filter-group-label">Dev Start Date</span>
+      <input type="date" id="date-from" class="date-input">
+      <span class="date-sep">to</span>
+      <input type="date" id="date-to" class="date-input">
+    </div>
     <button class="clear-btn" id="clear-filters">Clear filters</button>
     <button class="export-btn" id="export-excel">Export to Excel &#8595;</button>
   </div>
@@ -246,7 +264,7 @@ function nl2br(s) {
   return esc(s).replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
 }
 
-const state = { search: '', states: new Set(), owners: new Set() };
+const state = { search: '', states: new Set(), owners: new Set(), dateFrom: '', dateTo: '' };
 
 function buildFilterChips() {
   const sEl = document.getElementById('state-filters');
@@ -285,6 +303,13 @@ function matches(item) {
   }
   if (state.states.size && !state.states.has(item.state)) return false;
   if (state.owners.size && !state.owners.has(item.productOwner)) return false;
+  if (state.dateFrom || state.dateTo) {
+    const raw = item.devStartDateRaw;
+    if (!raw) return false;
+    const itemDate = raw.slice(0, 10);
+    if (state.dateFrom && itemDate < state.dateFrom) return false;
+    if (state.dateTo && itemDate > state.dateTo) return false;
+  }
   return true;
 }
 
@@ -372,9 +397,13 @@ function render() {
 }
 
 document.getElementById('search').addEventListener('input', (e) => { state.search = e.target.value; render(); });
+document.getElementById('date-from').addEventListener('change', (e) => { state.dateFrom = e.target.value; render(); });
+document.getElementById('date-to').addEventListener('change', (e) => { state.dateTo = e.target.value; render(); });
 document.getElementById('clear-filters').addEventListener('click', () => {
-  state.search = ''; state.states.clear(); state.owners.clear();
+  state.search = ''; state.states.clear(); state.owners.clear(); state.dateFrom = ''; state.dateTo = '';
   document.getElementById('search').value = '';
+  document.getElementById('date-from').value = '';
+  document.getElementById('date-to').value = '';
   render();
 });
 
@@ -389,8 +418,8 @@ document.getElementById('export-excel').addEventListener('click', () => {
     'Development Start Date': item.devStartDate || '',
     'Screens / Modules': item.screens.join(', '),
     'Problem Statement': item.problem_statement,
-    'Objective': item.objective,
-    'Steps to Use': item.steps_to_use,
+    'Objective': item.objective || '',
+    'Steps to Use': item.steps_to_use || '',
     'Acceptance Criteria': item.acceptance_criteria,
     'Screenshots Attached': item.images && item.images.length ? item.images.length : 0,
   }));
